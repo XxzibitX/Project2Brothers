@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+ARG VITE_ENVIRONMENT
+ARG VITE_API_BASE_URL
+ARG FRONTEND_PORT=3000
+ENV FRONTEND_PORT=${FRONTEND_PORT}
+
+ENV VITE_ENVIRONMENT=${VITE_ENVIRONMENT}
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+COPY package*.json ./
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build
+
+CMD sh -c "npm run preview -- --host 0.0.0.0 --port ${FRONTEND_PORT:-3000}"

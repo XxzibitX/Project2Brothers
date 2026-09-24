@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+dist/
+coverage/
+uploads/
+
+# Env
+.env
+.env.local
+
+# Logs / OS
+*.log
+.DS_Store
+
+# IDE
+.idea/
+.vscode/

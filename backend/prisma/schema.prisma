@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  MANAGER
+  OWNER
+}
+
+enum OrderStatus {
+  new
+  cooking
+  ready
+  courier
+  done
+  cancelled
+}
+
+enum PaymentMethod {
+  card_courier
+  cash_courier
+}
+
+model User {
+  id           String   @id @default(cuid())
+  phone        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole @default(CUSTOMER)
+  /// false = нельзя войти (уволен / отключён)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+  legalVersionsCreated LegalDocumentVersion[]
+  consents     Consent[]
+}
+
+model MenuCategory {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Общий справочник допов для меню
+model MenuExtra {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String              @id
+  name        String
+  description String              @db.Text
+  price       Decimal             @db.Decimal(10, 2)
+  weight      String
+  category    String
+  image       String              @db.Text
+  popular     Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  ingredients ProductIngredient[]
+  extras      ProductExtra[]
+  orderItems  OrderItem[]
+
+  @@index([category])
+}
+
+model ProductIngredient {
+  id        String  @id @default(cuid())
+  productId String
+  key       String
+  name      String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, key])
+  @@index([productId])
+}
+
+model ProductExtra {
+  id        String  @id @default(cuid())
+  productId String
+  key       String
+  name      String
+  price     Decimal @db.Decimal(10, 2)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, key])
+  @@index([productId])
+}
+
+model Order {
+  id                     String        @id
+  userId                 String?
+  customerName           String
+  customerPhone          String?
+  /// Полный адрес одной строкой (для отображения)
+  deliveryAddress        String?       @db.Text
+  deliveryStreet         String?
+  deliveryHouse          String?
+  deliveryEntrance       String?
+  deliveryApartment      String?
+  deliveryIsPrivateHouse Boolean       @default(false)
+  /// Оплата курьеру: картой или наличными
+  paymentMethod          PaymentMethod @default(cash_courier)
+  total                  Decimal       @db.Decimal(10, 2)
+  status                 OrderStatus   @default(new)
+  /// Клиентский ключ — повторный POST с тем же ключом вернёт тот же заказ
+  idempotencyKey         String?       @unique
+  /// Когда успешно отправили в Telegram (null = нужна досылка)
+  telegramNotifiedAt     DateTime?
+  /// Когда заказ ушёл в архив (старше ~30 дней, done/cancelled)
+  archivedAt             DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  telegramChatId         String?
+  telegramMessageId      Int?
+  user                   User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items                  OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([telegramNotifiedAt])
+  @@index([archivedAt])
+}
+
+/// Атомарный счётчик ORD-N (одна строка id=1)
+model OrderCounter {
+  id    Int @id @default(1)
+  value Int @default(1000)
+}
+
+model OrderItem {
+  id                   String   @id @default(cuid())
+  orderId              String
+  productId            String?
+  name                 String
+  price                Decimal  @db.Decimal(10, 2)
+  qty                  Int
+  removedIngredientIds Json
+  extraIds             Json
+  order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product              Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model AppConfig {
+  key   String @id
+  value Json
+}
+
+enum LegalDocumentType {
+  PRIVACY
+  OFFER
+  DELIVERY_INFO
+}
+
+enum ConsentType {
+  PERSONAL_DATA
+}
+
+/// Юридический документ кафе (черновик + указатель на опубликованную версию)
+model LegalDocument {
+  id               String            @id @default(cuid())
+  type             LegalDocumentType @unique
+  title            String
+  slug             String            @unique
+  /// HTML черновика (ещё не на сайте)
+  draftContent     String            @db.LongText
+  draftUpdatedAt   DateTime?
+  /// Номер текущей опубликованной версии, напр. "1.2" (null = ещё не публиковали)
+  publishedVersion String?
+  publishedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  versions         LegalDocumentVersion[]
+  consents         Consent[]
+
+  @@index([slug])
+}
+
+/// Неизменяемый снимок при публикации
+model LegalDocumentVersion {
+  id          String        @id @default(cuid())
+  documentId  String
+  version     String
+  content     String        @db.LongText
+  createdById String?
+  createdAt   DateTime      @default(now())
+  publishedAt DateTime
+  document    LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy   User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  consents    Consent[]
+
+  @@unique([documentId, version])
+  @@index([documentId])
+}
+
+/// Фиксация согласия пользователя с конкретной версией документа
+model Consent {
+  id                String                @id @default(cuid())
+  userId            String
+  type              ConsentType
+  documentId        String
+  documentVersionId String
+  /// Денормализованный номер версии на момент согласия
+  documentVersion   String
+  acceptedAt        DateTime              @default(now())
+  ipAddress         String?
+  userAgent         String?               @db.Text
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document          LegalDocument         @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  version           LegalDocumentVersion  @relation(fields: [documentVersionId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([type])
+}

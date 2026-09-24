@@ -1,0 +1,21 @@
+{
+  "name": "2Brothers",
+  "short_name": "2Brothers",
+  "icons": [
+    {
+      "src": "/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#14110f",
+  "background_color": "#14110f",
+  "display": "standalone"
+}
