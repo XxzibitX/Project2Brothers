@@ -1,11 +1,29 @@
 export function Hero() {
   return (
     <section className="relative min-h-[100svh] overflow-hidden bg-grill text-white">
+      {/* Tiny placeholder while full hero loads */}
       <img
-        src="/hero-shawarma.png"
+        src="/hero-shawarma-blur.webp"
         alt=""
-        className="absolute inset-0 h-full w-full object-cover animate-fade"
+        aria-hidden
+        className="absolute inset-0 h-full w-full scale-110 object-cover blur-md"
       />
+      <picture>
+        <source
+          type="image/webp"
+          srcSet="/hero-shawarma-800.webp 800w, /hero-shawarma.webp 1280w"
+          sizes="100vw"
+        />
+        <img
+          src="/hero-shawarma.png"
+          alt=""
+          width={1280}
+          height={720}
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover animate-fade"
+        />
+      </picture>
       <div className="hero-grain absolute inset-0" />
 
       <div className="relative mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-4 pb-16 pt-28 sm:px-6 sm:pb-20 lg:justify-center lg:pb-24">
@@ -31,12 +49,6 @@ export function Hero() {
           >
             Смотреть меню
           </a>
-          {/* <a
-            href="#menu"
-            className="inline-flex items-center justify-center rounded-md border border-white/25 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"
-          >
-            Заказать сейчас
-          </a> */}
         </div>
       </div>
     </section>
