@@ -6,8 +6,7 @@ npx prisma migrate deploy
 
 if [ "${SEED_ON_START}" = "true" ]; then
   echo "Seeding database..."
-  # ts-node is a devDependency; install temporarily for seed only
-  npm install --no-save ts-node typescript >/dev/null 2>&1 || true
+  # seed.js is plain Node (no ts-node) — works in production image
   npx prisma db seed || echo "Seed skipped or failed (non-fatal)"
 fi
 

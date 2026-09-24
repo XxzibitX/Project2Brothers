@@ -22,11 +22,12 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
+    "prisma:seed:compile": "tsc prisma/seed.ts --esModuleInterop --module commonjs --target ES2019 --skipLibCheck --outDir prisma --moduleResolution node",
     "db:setup": "prisma migrate dev --name init && prisma db seed",
     "postinstall": "prisma generate"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -1,6 +1,8 @@
 import { PrismaClient, OrderStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
+/** Source of truth. After edits run: npm run prisma:seed:compile */
+
 const prisma = new PrismaClient();
 
 const shawarmaIngredients = [
@@ -155,8 +157,7 @@ const products: SeedProduct[] = [
 ];
 
 async function main() {
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
+  await prisma.consent.deleteMany().catch(() => undefined);
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.productExtra.deleteMany();
