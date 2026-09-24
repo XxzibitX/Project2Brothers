@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpsertProductDto } from '../common/dto';
 import { mapProduct } from '../common/mappers';
 import { CategoriesService } from '../categories/categories.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 function slugify(value: string): string {
   const base = value
@@ -27,6 +28,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly categoriesService: CategoriesService,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   async findAll(category?: string) {
@@ -120,6 +122,10 @@ export class ProductsService {
       });
     });
 
+    if (existing.image && existing.image !== dto.image) {
+      await this.deleteImageIfUnused(existing.image);
+    }
+
     return mapProduct(product);
   }
 
@@ -153,7 +159,19 @@ export class ProductsService {
       this.prisma.product.delete({ where: { id } }),
     ]);
 
+    await this.deleteImageIfUnused(existing.image);
+
     return { ok: true };
+  }
+
+  /** Удаляет файл с диска, если URL больше ни у кого не используется. */
+  private async deleteImageIfUnused(imageUrl: string | null | undefined) {
+    if (!imageUrl) return;
+    const stillUsed = await this.prisma.product.count({
+      where: { image: imageUrl },
+    });
+    if (stillUsed > 0) return;
+    await this.uploadsService.deleteLocalProductImage(imageUrl);
   }
 
   private async resolveNewId(preferred: string | undefined, name: string) {
